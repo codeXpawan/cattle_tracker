@@ -56,7 +56,7 @@ export default function TempChart({ history }) {
         title: { display: true, text: 'Time', color: '#5a6478', font: { family: 'Inter', size: 11, weight: '600' } },
       },
       y: {
-        min: 37, max: 41,
+        min: 20, max: 41,
         grid: { color: 'rgba(255,255,255,0.03)', drawBorder: false },
         ticks: { color: '#5a6478', font: { family: 'Inter', size: 10 }, callback: v => v + '°C', stepSize: 0.5 },
         title: { display: true, text: 'Temperature (°C)', color: '#5a6478', font: { family: 'Inter', size: 11, weight: '600' } },
@@ -77,22 +77,25 @@ export default function TempChart({ history }) {
       annotation: {
         annotations: {
           safeZone: {
-            type: 'box', yMin: 38, yMax: 39,
+            type: 'box', yMin: 27, yMax: 29,
             backgroundColor: 'rgba(0, 230, 118, 0.06)',
             borderColor: 'rgba(0, 230, 118, 0.15)',
             borderWidth: 1, borderDash: [4, 4],
             label: { display: true, content: 'Safe Zone', position: 'start', color: 'rgba(0, 230, 118, 0.5)', font: { size: 9, weight: '600' } },
           },
-          dangerZone: {
-            type: 'box', yMin: 39.5, yMax: 41,
+          dangerZoneLow: {
+            type: 'box', yMin: 25, yMax: 27,
             backgroundColor: 'rgba(255, 23, 68, 0.06)',
             borderColor: 'rgba(255, 23, 68, 0.15)',
             borderWidth: 1, borderDash: [4, 4],
-            label: { display: true, content: 'Danger Zone', position: 'start', color: 'rgba(255, 23, 68, 0.5)', font: { size: 9, weight: '600' } },
+            label: { display: true, content: 'Danger Zone (Low)', position: 'start', color: 'rgba(255, 23, 68, 0.5)', font: { size: 9, weight: '600' } },
           },
-          warningLine: {
-            type: 'line', yMin: 39.5, yMax: 39.5,
-            borderColor: 'rgba(255, 23, 68, 0.4)', borderWidth: 1.5, borderDash: [6, 4],
+          dangerZoneHigh: {
+            type: 'box', yMin: 29, yMax: 41,
+            backgroundColor: 'rgba(255, 23, 68, 0.06)',
+            borderColor: 'rgba(255, 23, 68, 0.15)',
+            borderWidth: 1, borderDash: [4, 4],
+            label: { display: true, content: 'Danger Zone (High)', position: 'start', color: 'rgba(255, 23, 68, 0.5)', font: { size: 9, weight: '600' } },
           },
         },
       },

@@ -7,7 +7,7 @@ import AiPanel from './components/AiPanel'
 import NotificationCards from './components/NotificationCards'
 import MobilePreview from './components/MobilePreview'
 
-const API = 'http://localhost:5005/api/cattle'
+const API = 'http://192.168.4.1/api/cattle'
 
 interface TempPoint {
   time: string;
@@ -40,59 +40,31 @@ export default function Home() {
       .catch(() => setIsOnline(false))
   }, [])
 
-  // Fetch temperature data and set up SSE
-  useEffect(() => {
-    let cancelled = false
+  // Push current time to ESP32 on mount
+useEffect(() => {
+    // Push time to ESP32 once on mount
+    const iso = new Date().toISOString().slice(0, 19)
+    fetch('http://192.168.4.1/api/cattle/time', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ time: iso })
+    }).catch(e => console.warn('Time sync failed:', e))
 
-    // Initial fetch
-    const fetchData = () => {
-      fetch(`${API}/${activeCattle}/temperature`)
-        .then(r => r.json())
-        .then(data => {
-          if (!cancelled) {
-            setTempData(data)
-            setIsOnline(true)
-          }
-        })
-        .catch(() => !cancelled && setIsOnline(false))
+    // Poll temperature every 5 seconds instead of SSE
+    const poll = () => {
+        fetch('http://192.168.4.1/api/cattle/CTL-001/temperature')
+            .then(r => r.json())
+            .then(data => {
+                setTempData(data)
+                setIsOnline(true)
+            })
+            .catch(() => setIsOnline(false))
     }
 
-    fetchData()
-
-    // SSE for live updates
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close()
-    }
-
-    const es = new EventSource(`${API}/${activeCattle}/stream`)
-    eventSourceRef.current = es
-
-    es.onmessage = (event) => {
-      const point = JSON.parse(event.data)
-      setTempData(prev => {
-        const history = [...prev.history, point]
-        if (history.length > 30) history.shift()
-        const latest = point.temp
-        const hr = Math.round(68 + (latest - 37.5) * 8 + (Math.random() - 0.5) * 4)
-        let activity = 'Normal'
-        if (latest > 39.5) activity = 'Restless'
-        else if (latest > 39) activity = 'Active'
-        return { ...prev, history, current: latest, heartRate: hr, activity }
-      })
-      setIsOnline(true)
-    }
-
-    es.onerror = () => setIsOnline(false)
-
-    // Reset AI when cattle changes
-    setAiResult(null)
-    setAiStatus('idle')
-
-    return () => {
-      cancelled = true
-      es.close()
-    }
-  }, [activeCattle])
+    poll() // immediate first call
+    const interval = setInterval(poll, 5000)
+    return () => clearInterval(interval)  // cleanup on unmount
+}, [activeCattle])
 
   // Run AI model
   const runAi = useCallback(async () => {
