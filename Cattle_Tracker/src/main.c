@@ -64,7 +64,7 @@ int main(void)
     ds18b20_set_resolution(12);
     LOG_INF("DS18B20 ready");
 
-    /* ── Bluetooth ──────────────────────────────────────────────────────── */
+    /* ── Bluetooth enable ───────────────────────────────────────────────── */
     err = bt_enable(NULL);
     if (err) {
         LOG_ERR("BT enable failed (%d)", err);
@@ -72,35 +72,19 @@ int main(void)
     }
     LOG_INF("BT enabled");
 
-    /* ── Extended advertiser: Primary 1M, Secondary 1M ──────────────────── 
-     * BT_LE_ADV_OPT_EXT_ADV alone picks 2M secondary on nRF52840.
-     * BT_LE_ADV_OPT_NO_2M forces secondary PHY to 1M as well.
-     * ───────────────────────────────────────────────────────────────────── */
-    struct bt_le_adv_param adv_param = {
-        .id                 = BT_ID_DEFAULT,
-        .sid                = 0,
-        .secondary_max_skip = 0,
-        .options            = BT_LE_ADV_OPT_EXT_ADV |
-                              BT_LE_ADV_OPT_CODED,   
-        .interval_min       = BT_GAP_ADV_SLOW_INT_MIN,
-        .interval_max       = BT_GAP_ADV_SLOW_INT_MAX,
-        .peer               = NULL,
-    };
-
-    err = bt_le_ext_adv_create(&adv_param, NULL, &adv_set);
+    /* ── Create advertiser FIRST ────────────────────────────────────────── */
+    err = bt_le_ext_adv_create(BT_LE_EXT_ADV_NCONN, NULL, &adv_set);
     if (err) {
         LOG_ERR("ext_adv_create failed (%d)", err);
         return err;
     }
     LOG_INF("Ext adv set created (Primary 1M / Secondary 1M)");
 
-    /* ── First temperature read ─────────────────────────────────────────── 
-     * Must do a full blocking read BEFORE starting advertising so the
-     * initial payload is never 0x00000000.
-     * ───────────────────────────────────────────────────────────────────── */
-    temp = ds18b20_get_temp();   /* blocking: requests + waits 750ms + reads */
+    /* ── Read temperature AFTER adv_set exists ──────────────────────────── */
+    temp = ds18b20_get_temp();
     LOG_INF("Initial temperature: %.4f C", (double)temp);
 
+    /* ── Now safe to set payload ────────────────────────────────────────── */
     err = update_adv_payload(temp);
     if (err) {
         return err;
@@ -112,21 +96,13 @@ int main(void)
         LOG_ERR("ext_adv_start failed (%d)", err);
         return err;
     }
-    LOG_INF("Advertising — Primary PHY: 1M  Secondary PHY: 1M");
+    LOG_INF("Advertising started");
 
     /* ── Main loop ──────────────────────────────────────────────────────── */
     while (1) {
         k_msleep(3000);
-
-        /*
-         * Use get_temp() (blocking method 1) rather than method2() here.
-         * method2() calls request_temperatures() then returns immediately —
-         * the 750ms wait must happen before the scratchpad read or you
-         * get stale/zero data. get_temp() handles this internally.
-         */
         temp = ds18b20_get_temp();
         LOG_INF("Temperature: %.4f C", (double)temp);
-
         update_adv_payload(temp);
     }
 

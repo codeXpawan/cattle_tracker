@@ -405,8 +405,7 @@ int main(void)
      */
     struct bt_le_scan_param scan_param = {
         .type     = BT_LE_SCAN_TYPE_PASSIVE,
-        .options  = BT_LE_SCAN_OPT_CODED
-             | BT_LE_SCAN_OPT_FILTER_DUPLICATE,       /* no duplicate filtering */
+        .options  = BT_LE_SCAN_OPT_FILTER_DUPLICATE,       /* no duplicate filtering */
         .interval = 160,    /* 100 ms in 0.625 ms units */
         .window   = 160,    /* = interval → 100% duty   */
     };
